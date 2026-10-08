@@ -15,20 +15,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Build package
         run: |
-          mkdir dist
-          zip -r dist/package.zip . -x ".git/*" "dist/*"
+          python -m pip install --upgrade pip build
+          python -m build
 
       - name: Generate SHA-256
         working-directory: dist
-        run: sha256sum package.zip > SHA256SUMS.txt
+        run: sha256sum *.whl *.tar.gz > SHA256SUMS.txt
 
       - name: Upload package and checksum
         uses: actions/upload-artifact@v4
         with:
           name: package-${{ github.event.pull_request.number }}
           path: |
-            dist/package.zip
+            dist/*.whl
+            dist/*.tar.gz
             dist/SHA256SUMS.txt
           if-no-files-found: error

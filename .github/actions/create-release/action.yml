@@ -1,0 +1,54 @@
+name: Create tag and release
+description: Creates a git tag and a GitHub Release with attached assets
+
+inputs:
+  version:
+    description: Version without the "v" prefix, e.g. 0.1.0
+    required: true
+  notes-file:
+    description: Path to the file with release notes
+    required: true
+  files:
+    description: Space-separated list of files to attach as release assets
+    required: true
+  token:
+    description: GitHub token with contents:write permission
+    required: true
+
+outputs:
+  tag:
+    description: Created tag name
+    value: ${{ steps.release.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - id: release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        VERSION: ${{ inputs.version }}
+        NOTES_FILE: ${{ inputs.notes-file }}
+        FILES: ${{ inputs.files }}
+      run: |
+        set -euo pipefail
+        TAG="v${VERSION}"
+
+        if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+          echo "::error::Tag ${TAG} already exists. Bump the version in the code."
+          exit 1
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git tag -a "${TAG}" -m "Release ${TAG}"
+        git push origin "${TAG}"
+
+        # $FILES навмисно без лапок: розбиваємо список на окремі файли
+        gh release create "${TAG}" ${FILES} \
+          --title "${TAG}" \
+          --notes-file "${NOTES_FILE}" \
+          --verify-tag
+
+        echo "tag=${TAG}" >> "$GITHUB_OUTPUT"

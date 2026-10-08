@@ -1,0 +1,34 @@
+name: PR Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build package
+        run: |
+          mkdir dist
+          zip -r dist/package.zip . -x ".git/*" "dist/*"
+
+      - name: Generate SHA-256
+        working-directory: dist
+        run: sha256sum package.zip > SHA256SUMS.txt
+
+      - name: Upload package and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ github.event.pull_request.number }}
+          path: |
+            dist/package.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error

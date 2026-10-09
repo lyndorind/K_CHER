@@ -11,3 +11,12 @@ requires-python = ">=3.10"
 
 [tool.setuptools.dynamic]
 version = {attr = "k_cher.__version__"}
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

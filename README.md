@@ -1,4 +1,7 @@
 # K_CHER
+
+[![codecov](https://codecov.io/gh/lyndorind/K_CHER/graph/badge.svg)](https://codecov.io/gh/lyndorind/K_CHER)
+
 ## Опис
 У цьому репозиторії зберігаються файли, створені під час виконання практичних завдань з роботи з системою контролю версій Git та платформою GitHub.
 

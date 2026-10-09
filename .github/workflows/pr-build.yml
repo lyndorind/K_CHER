@@ -29,7 +29,7 @@ jobs:
         run: sha256sum *.whl *.tar.gz > SHA256SUMS.txt
 
       - name: Upload package and checksum
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: package-${{ github.event.pull_request.number }}
           path: |

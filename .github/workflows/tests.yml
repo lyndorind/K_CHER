@@ -23,5 +23,6 @@ jobs:
       - uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: lyndorind/kcher
           files: coverage.xml
           fail_ci_if_error: true

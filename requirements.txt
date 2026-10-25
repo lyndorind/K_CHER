@@ -1,2 +1,2 @@
 requests>=2.32.4
-Django==3.0
+Django==5.2.17

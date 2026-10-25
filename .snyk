@@ -1,0 +1,6 @@
+version: v1.25.0
+ignore:
+  SNYK-PYTHON-SQLPARSE-21248801:
+    - '*':
+        reason: No fixed version available yet. sqlparse is only a transitive dependency of Django and does not process untrusted input in this educational project.
+        expires: 2026-12-31T00:00:00.000Z

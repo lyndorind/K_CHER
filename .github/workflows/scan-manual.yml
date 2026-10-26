@@ -1,0 +1,21 @@
+name: Manual Image Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Версія образу (тег), наприклад 1.3.0"
+        required: true
+        default: "latest"
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    uses: ./.github/workflows/image-scan.yml
+    with:
+      tag: ${{ inputs.version }}
+    secrets: inherit

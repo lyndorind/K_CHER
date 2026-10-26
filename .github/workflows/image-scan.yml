@@ -1,0 +1,84 @@
+name: Image Scan
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Image tag to scan
+        required: true
+        type: string
+    secrets:
+      SNYK_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REF: ${{ vars.DOCKERHUB_NAMESPACE }}/kcher:${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_REF }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+
+      - name: Upload SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+  grype:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REF: ${{ vars.DOCKERHUB_NAMESPACE }}/kcher:${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Scan with Grype
+        id: grype
+        uses: anchore/scan-action@v7
+        with:
+          image: ${{ env.IMAGE_REF }}
+          fail-build: false
+          output-format: sarif
+
+      - name: Upload SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype
+
+  snyk:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REF: ${{ vars.DOCKERHUB_NAMESPACE }}/kcher:${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Scan with Snyk
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ env.IMAGE_REF }}
+          args: --severity-threshold=low
+
+      - name: Upload SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: snyk.sarif
+          category: snyk

@@ -53,7 +53,11 @@ jobs:
       - name: Sign image (cosign, keyless)
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
-        run: cosign sign --yes "${IMAGE}@${DIGEST}"
+        run: |
+          cosign sign --yes \
+            --new-bundle-format=false \
+            --use-signing-config=false \
+            "${IMAGE}@${DIGEST}"
 
       - name: Verify signature
         env:

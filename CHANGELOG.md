@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.0] - 2026-10-26
+### Added
+- Dockerfile та .dockerignore для збірки контейнерного образу
+- Воркфлоу публікації образу в Docker Hub при створенні релізу
+
 ## [1.2.0] - 2026-10-25
 ### Added
 - REST API на FastAPI (`/health`, `/version`, `/hello/{name}`, `/add`, `/divide`) і тести до нього

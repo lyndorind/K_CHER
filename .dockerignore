@@ -1,0 +1,34 @@
+# Git та CI
+.git
+.github
+.devcontainer
+.vscode
+
+# Локальне середовище та кеші
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Артефакти збірки та звіти
+dist/
+build/
+*.egg-info/
+coverage.xml
+allure-results/
+
+# Не потрібне в образі
+tests/
+docs/
+*.md
+!README.md
+requirements*.txt
+
+# Секрети
+.env
+.env.*
+
+# Сам Docker
+Dockerfile
+.dockerignore

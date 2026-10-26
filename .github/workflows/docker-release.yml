@@ -48,7 +48,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - uses: sigstore/cosign-installer@v4
+      - uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign image (cosign, keyless)
         env:
@@ -62,21 +62,3 @@ jobs:
           cosign verify "${IMAGE}@${DIGEST}" \
             --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/docker-release\.yml@refs/tags/.*$" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
-
-  notify:
-    needs: docker
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify Slack
-        uses: slackapi/slack-github-action@v4.0.0
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "${{ needs.docker.result == 'success' && '✅ Образ опубліковано' || '❌ Помилка публікації образу' }}: ${{ github.repository }} ${{ github.event.release.tag_name }}"
-            blocks:
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*${{ needs.docker.result == 'success' && '✅ Образ опубліковано' || '❌ Помилка публікації образу' }}*\nРепозиторій: `${{ github.repository }}`\nВерсія: `${{ needs.docker.outputs.version }}`\nОбраз: `${{ vars.DOCKERHUB_NAMESPACE }}/kcher:${{ needs.docker.outputs.version }}`\n<${{ github.event.release.html_url }}|Реліз> · <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Запуск воркфлоу>"

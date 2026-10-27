@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   scan:
-    uses: ./.github/workflows/image-scan.yml
+    uses: lyndorind/kcher/.github/workflows/image-scan.yml@main
     with:
       tag: ${{ inputs.version }}
     secrets: inherit

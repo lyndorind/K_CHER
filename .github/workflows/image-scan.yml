@@ -80,6 +80,7 @@ jobs:
           args: --file=Dockerfile --severity-threshold=low --sarif-file-output=snyk.sarif
 
 
+
       - name: Fix invalid SARIF severity values
         if: always()
         run: |
@@ -95,35 +96,47 @@ jobs:
           with path.open("r", encoding="utf-8") as f:
               data = json.load(f)
 
-          removed = []
+          fixed = 0
 
-          def clean(obj, location="$"):
+          def clean(obj):
+              nonlocal_dummy = None
+              global_fixed = 0
+
               if isinstance(obj, dict):
-                  if (
-                      "security-severity" in obj
-                      and obj["security-severity"] is None
-                  ):
-                      removed.append(location + ".security-severity")
+                  if "security-severity" in obj and obj["security-severity"] is None:
                       del obj["security-severity"]
+                      global_fixed = 1
 
-                  for key, value in list(obj.items()):
-                      clean(value, f"{location}.{key}")
+                  for value in obj.values():
+                      clean(value)
 
               elif isinstance(obj, list):
-                  for i, value in enumerate(obj):
-                      clean(value, f"{location}[{i}]")
+                  for value in obj:
+                      clean(value)
 
-          clean(data)
+          def remove_nulls(obj):
+              global fixed
+
+              if isinstance(obj, dict):
+                  if "security-severity" in obj and obj["security-severity"] is None:
+                      del obj["security-severity"]
+                      fixed += 1
+
+                  for value in list(obj.values()):
+                      remove_nulls(value)
+
+              elif isinstance(obj, list):
+                  for value in obj:
+                      remove_nulls(value)
+
+          remove_nulls(data)
 
           with path.open("w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
 
-          print(f"Removed null severity values: {len(removed)}")
-          for item in removed:
-              print(f"Fixed: {item}")
-
-          print("SARIF file updated successfully.")
+          print(f"Removed null severity values: {fixed}")
           PY
+
 
 
       - name: Check Snyk SARIF report

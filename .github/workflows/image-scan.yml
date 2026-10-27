@@ -79,71 +79,52 @@ jobs:
           image: ${{ env.IMAGE_REF }}
           args: --file=Dockerfile --severity-threshold=low --sarif-file-output=snyk.sarif
 
+
       - name: Fix invalid SARIF severity values
         if: always()
         run: |
           python3 <<'PY'
           import json
           from pathlib import Path
-          from numbers import Number
 
           path = Path("snyk.sarif")
 
           if not path.exists():
-              raise SystemExit("ERROR: snyk.sarif was not created")
+              raise SystemExit("ERROR: snyk.sarif does not exist")
 
-          with path.open(encoding="utf-8") as f:
+          with path.open("r", encoding="utf-8") as f:
               data = json.load(f)
 
-          removed = 0
-          converted = 0
+          removed = []
 
-          def fix(obj):
-              global removed, converted
-
+          def clean(obj, location="$"):
               if isinstance(obj, dict):
-                  props = obj.get("properties")
+                  if (
+                      "security-severity" in obj
+                      and obj["security-severity"] is None
+                  ):
+                      removed.append(location + ".security-severity")
+                      del obj["security-severity"]
 
-                  if isinstance(props, dict):
-                      value = props.get("security-severity")
-
-                      if "security-severity" in props:
-                          if value is None or isinstance(value, bool):
-                              del props["security-severity"]
-                              removed += 1
-                          elif isinstance(value, str):
-                              try:
-                                  number = float(value)
-                                  if 0 < number <= 10:
-                                      props["security-severity"] = str(number)
-                                      converted += 1
-                                  else:
-                                      del props["security-severity"]
-                                      removed += 1
-                              except ValueError:
-                                  del props["security-severity"]
-                                  removed += 1
-                          elif isinstance(value, Number):
-                              if not 0 < value <= 10:
-                                  del props["security-severity"]
-                                  removed += 1
-
-                  for value in obj.values():
-                      fix(value)
+                  for key, value in list(obj.items()):
+                      clean(value, f"{location}.{key}")
 
               elif isinstance(obj, list):
-                  for value in obj:
-                      fix(value)
+                  for i, value in enumerate(obj):
+                      clean(value, f"{location}[{i}]")
 
-          fix(data)
+          clean(data)
 
           with path.open("w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
 
-          print(f"Removed invalid severity values: {removed}")
-          print(f"Normalized numeric severity values: {converted}")
-          print("SARIF file saved.")
+          print(f"Removed null severity values: {len(removed)}")
+          for item in removed:
+              print(f"Fixed: {item}")
+
+          print("SARIF file updated successfully.")
           PY
+
 
       - name: Check Snyk SARIF report
         if: always()

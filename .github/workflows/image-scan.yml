@@ -75,7 +75,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ env.IMAGE_REF }}
-          args: --file=Dockerfile --sarif-file-output=snyk.sarif --severity-threshold=low
+          args: --file=Dockerfile --severity-threshold=low
           sarif: true
 
       - name: Check Snyk SARIF report

@@ -60,6 +60,7 @@ jobs:
           sarif_file: ${{ steps.grype.outputs.sarif }}
           category: grype
 
+
   snyk:
     runs-on: ubuntu-latest
     env:
@@ -74,7 +75,19 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ env.IMAGE_REF }}
-          args: --file=Dockerfile --sarif-file-output=snyk.sarif --severity-threshold=low
+          args: --file=Dockerfile --severity-threshold=low
+          sarif: true
+
+      - name: Check Snyk SARIF report
+        if: always()
+        run: |
+          if [ -f snyk.sarif ]; then
+            echo "Snyk SARIF report was created."
+            ls -lh snyk.sarif
+          else
+            echo "::error::Snyk did not create snyk.sarif"
+            exit 1
+          fi
 
       - name: Upload SARIF to Code Scanning
         if: always()

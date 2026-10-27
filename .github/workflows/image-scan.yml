@@ -74,7 +74,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ env.IMAGE_REF }}
-          args: --severity-threshold=low
+          args: --file=Dockerfile --sarif-file-output=snyk.sarif --severity-threshold=low
 
       - name: Upload SARIF to Code Scanning
         if: always()

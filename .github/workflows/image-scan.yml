@@ -69,28 +69,29 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Scan with Snyk
+        id: snyk_scan
         uses: snyk/actions/docker@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ env.IMAGE_REF }}
-          args: --file=Dockerfile --severity-threshold=low
-          sarif: true
+          args: --file=Dockerfile --sarif-file-output=snyk.sarif --severity-threshold=low
 
-      - name: Check Snyk SARIF report
+      - name: Check generated report
         if: always()
         run: |
+          pwd
+          ls -la
           if [ -f snyk.sarif ]; then
-            echo "Snyk SARIF report was created."
-            ls -lh snyk.sarif
+            echo "SARIF report exists"
           else
-            echo "::error::Snyk did not create snyk.sarif"
+            echo "SARIF report was not generated"
             exit 1
           fi
 
       - name: Upload SARIF to Code Scanning
-        if: always()
+        if: always() && hashFiles('snyk.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk.sarif

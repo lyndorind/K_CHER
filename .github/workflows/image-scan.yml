@@ -1,3 +1,4 @@
+
 name: Image Scan
 
 on:
@@ -60,38 +61,81 @@ jobs:
           sarif_file: ${{ steps.grype.outputs.sarif }}
           category: grype
 
-
   snyk:
     runs-on: ubuntu-latest
     env:
       IMAGE_REF: ${{ vars.DOCKERHUB_NAMESPACE }}/kcher:${{ inputs.tag }}
+
     steps:
       - uses: actions/checkout@v7
 
       - name: Scan with Snyk
-        id: snyk_scan
         uses: snyk/actions/docker@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ env.IMAGE_REF }}
-          args: --file=Dockerfile --sarif-file-output=snyk.sarif --severity-threshold=low
+          args: --file=Dockerfile --severity-threshold=low
+          sarif: true
 
-      - name: Check generated report
+      - name: Check Snyk SARIF report
         if: always()
         run: |
-          pwd
-          ls -la
           if [ -f snyk.sarif ]; then
-            echo "SARIF report exists"
+            echo "Snyk SARIF report was created."
+            ls -lh snyk.sarif
           else
-            echo "SARIF report was not generated"
+            echo "::error::Snyk did not create snyk.sarif"
             exit 1
           fi
 
+      - name: Fix invalid SARIF severity values
+        if: always()
+        run: |
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("snyk.sarif")
+
+          if not path.exists():
+              print("SARIF file not found; skipping normalization.")
+              raise SystemExit(0)
+
+          with path.open("r", encoding="utf-8") as file:
+              data = json.load(file)
+
+          fixed = 0
+
+          for run in data.get("runs", []):
+              rules = (
+                  run.get("tool", {})
+                  .get("driver", {})
+                  .get("rules", [])
+              )
+
+              for rule in rules:
+                  properties = rule.get("properties")
+
+                  if not isinstance(properties, dict):
+                      continue
+
+                  if (
+                      "security-severity" in properties
+                      and properties["security-severity"] is None
+                  ):
+                      del properties["security-severity"]
+                      fixed += 1
+
+          with path.open("w", encoding="utf-8") as file:
+              json.dump(data, file, ensure_ascii=False, indent=2)
+
+          print(f"Removed {fixed} null security-severity value(s).")
+          PY
+
       - name: Upload SARIF to Code Scanning
-        if: always() && hashFiles('snyk.sarif') != ''
+        if: always()
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk.sarif

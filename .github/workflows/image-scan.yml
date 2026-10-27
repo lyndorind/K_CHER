@@ -82,6 +82,7 @@ jobs:
       - name: Fix invalid SARIF severity values
         if: always()
         run: |
+          sudo chown "$(id -u):$(id -g)" snyk.sarif
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -90,15 +91,23 @@ jobs:
           if not path.exists():
               raise SystemExit("ERROR: snyk.sarif not found")
 
-          with path.open(encoding="utf-8") as f:
-              data = json.load(f)
-
+          data = json.loads(path.read_text(encoding="utf-8"))
           fixed = 0
+
+          def is_number(v):
+              if isinstance(v, bool) or v is None:
+                  return False
+              try:
+                  float(v)
+                  return True
+              except (TypeError, ValueError):
+                  return False
 
           def clean(obj):
               global fixed
               if isinstance(obj, dict):
-                  if obj.get("security-severity", "MISSING") is None:
+                  if "security-severity" in obj and not is_number(obj["security-severity"]):
+                      print(f"Removing bad value: {obj['security-severity']!r}")
                       del obj["security-severity"]
                       fixed += 1
                   for value in list(obj.values()):
@@ -108,11 +117,8 @@ jobs:
                       clean(value)
 
           clean(data)
-
-          with path.open("w", encoding="utf-8") as f:
-              json.dump(data, f, ensure_ascii=False, indent=2)
-
-          print(f"Removed null severity values: {fixed}")
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+          print(f"Removed invalid severity values: {fixed}")
           PY
 
       - name: Check Snyk SARIF report

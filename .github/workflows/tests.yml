@@ -20,7 +20,7 @@ jobs:
       - name: Run tests
         run: uv run pytest --cov=calculator --cov=k_cher --cov-report=xml --cov-report=term-missing --alluredir=allure-results
 
-      - uses: codecov/codecov-action@v6
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: lyndorind/kcher

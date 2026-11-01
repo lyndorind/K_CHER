@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0] - 2026-11-01
+
+### Added
+- API журналу обчислень із зберіганням у PostgreSQL: `POST /calculations`, `GET /calculations`, `GET /calculations/{id}`, `DELETE /calculations/{id}`
+- Ендпоінт `GET /ready` для перевірки підключення до бази даних
+- Налаштування підключення до бази даних через змінні середовища, включно з паролем із файлу (Docker secret)
+- Тести нового API на SQLite у пам'яті
+
+### Changed
+- Додано залежності `sqlalchemy` і `psycopg`
+
 ## [1.3.3] - 2026-10-26
 ### Fixed
 - Підпис образу cosign виконується у форматі, сумісному з Docker Hub (без Referrers API)

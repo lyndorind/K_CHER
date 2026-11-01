@@ -1,0 +1,416 @@
+{
+  "info": {
+    "name": "K_CHER API: інтеграційні тести",
+    "description": "Інтеграційні тести API журналу обчислень (FastAPI + PostgreSQL).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "calculationId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health: сервіс працює",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Тіло містить status ok\", function () {",
+              "    pm.expect(pm.response.json().status).to.eql(\"ok\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ready: база даних доступна",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Сервіс готовий до роботи з БД\", function () {",
+              "    pm.expect(pm.response.json().status).to.eql(\"ready\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ready",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ready"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Створити обчислення: додавання",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 201\", function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test(\"Результат 2 + 3 дорівнює 5\", function () {",
+              "    pm.expect(body.operation).to.eql(\"add\");",
+              "    pm.expect(body.result).to.eql(5);",
+              "});",
+              "pm.test(\"Запис має id та час створення\", function () {",
+              "    pm.expect(body.id).to.be.a(\"number\");",
+              "    pm.expect(body.created_at).to.be.a(\"string\");",
+              "});",
+              "pm.collectionVariables.set(\"calculationId\", body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/calculations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"operation\": \"add\", \"a\": 2, \"b\": 3}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Створити обчислення: ділення",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Результат 9 / 4 дорівнює 2.25\", function () {",
+              "    pm.expect(pm.response.json().result).to.eql(2.25);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/calculations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"operation\": \"divide\", \"a\": 9, \"b\": 4}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Ділення на нуль повертає 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"Повідомлення про ділення на нуль\", function () {",
+              "    pm.expect(pm.response.json().detail).to.eql(\"Division by zero\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/calculations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"operation\": \"divide\", \"a\": 1, \"b\": 0}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Невідома операція повертає 422",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 422\", function () { pm.response.to.have.status(422); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/calculations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"operation\": \"pow\", \"a\": 1, \"b\": 2}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Отримати обчислення за id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Повернуто потрібний запис\", function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"calculationId\")));",
+              "    pm.expect(body.result).to.eql(5);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calculations/{{calculationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations",
+            "{{calculationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Список обчислень",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 200\", function () { pm.response.to.have.status(200); });",
+              "const items = pm.response.json();",
+              "const ids = items.map(function (item) { return item.id; });",
+              "pm.test(\"Список містить щонайменше два записи\", function () {",
+              "    pm.expect(items).to.be.an(\"array\");",
+              "    pm.expect(items.length).to.be.at.least(2);",
+              "});",
+              "pm.test(\"Список містить створений запис\", function () {",
+              "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"calculationId\")));",
+              "});",
+              "pm.test(\"Новіші записи йдуть першими\", function () {",
+              "    const sorted = ids.slice().sort(function (x, y) { return y - x; });",
+              "    pm.expect(ids).to.eql(sorted);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calculations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Неіснуючий id повертає 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calculations/999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations",
+            "999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Видалити обчислення",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calculations/{{calculationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations",
+            "{{calculationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Після видалення запис недоступний",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calculations/{{calculationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calculations",
+            "{{calculationId}}"
+          ]
+        }
+      }
+    }
+  ]
+}

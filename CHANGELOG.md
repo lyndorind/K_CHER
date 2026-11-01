@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.2] - 2026-11-01
+### Added
+- Інтеграційні тести API у Postman: колекція `postman/kcher.postman_collection.json` (11 запитів з перевірками)
+- Job `integration (Postman)` у воркфлоу `PR Docker Build`: запускає Newman проти тимчасового образу `pr-<номер>-<sha>` і PostgreSQL, які піднімаються через блок `services`, паралельно з unit-тестами
+- HTML-звіт Newman (htmlextra) зберігається як артефакт `newman-report`
+
+### Changed
+- Воркфлоу `PR Docker Build` передає посилання на тимчасовий образ наступним job
+
 ## [1.4.1] - 2026-11-01
 ### Added
 - Воркфлоу `PR Docker Build`: збірка й публікація Docker-образу в pull request із тимчасовим тегом `pr-<номер>-<sha>` та smoke-тестом

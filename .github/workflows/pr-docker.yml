@@ -17,7 +17,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ steps.meta.outputs.tags }}
+      image: ${{ steps.ref.outputs.image }}
     env:
       IMAGE: ${{ vars.DOCKERHUB_NAMESPACE }}/kcher
     steps:
@@ -58,5 +58,79 @@ jobs:
           docker logs kcher-smoke
           exit 1
 
+      - name: Image reference for the next jobs
+        id: ref
+        run: echo "image=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)" >> "$GITHUB_OUTPUT"
+
       - name: Summary
-        run: echo "Temporary image ${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "Temporary image ${{ steps.ref.outputs.image }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # Інтеграційні тести Postman. Запускаються після збірки образу, але не залежать
+  # від unit-тестів (tests.yml), тому виконуються паралельно з ними.
+  integration:
+    name: integration (Postman)
+    needs: docker
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kcher
+          POSTGRES_PASSWORD: kcher_ci_password
+          POSTGRES_DB: kcher
+        options: >-
+          --health-cmd "pg_isready -U kcher -d kcher"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      app:
+        image: ${{ needs.docker.outputs.image }}
+        credentials:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        env:
+          DB_HOST: postgres
+          DB_NAME: kcher
+          DB_USER: kcher
+          DB_PASSWORD: kcher_ci_password
+        ports:
+          - 8000:8000
+        options: >-
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Wait for API and database
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/ready && exit 0
+            sleep 2
+          done
+          echo "API did not become ready"
+          exit 1
+
+      - name: Install Newman
+        run: npm install -g newman@6 newman-reporter-htmlextra@1.23.1
+
+      - name: Run Postman collection
+        run: |
+          mkdir -p newman-report
+          newman run postman/kcher.postman_collection.json \
+            --env-var "baseUrl=http://localhost:8000" \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export newman-report/report.html \
+            --reporter-htmlextra-title "K_CHER integration tests (PR #${{ github.event.pull_request.number }})"
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: newman-report
+          path: newman-report/
+          if-no-files-found: warn
+
+      - name: Application logs on failure
+        if: failure()
+        run: docker logs "$(docker ps -q --filter "ancestor=${{ needs.docker.outputs.image }}")"

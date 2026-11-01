@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.3] - 2026-11-01
+### Added
+- `docker-compose.yml` для розгортання сервісу разом із PostgreSQL 16: том `pgdata` для персистентності даних і Docker secret `db_password` для пароля бази даних
+- Розділ «Запуск через Docker Compose» у README
+
+### Changed
+- `.gitignore`: каталог `secrets/` не потрапляє в репозиторій
+
 ## [1.4.2] - 2026-11-01
 ### Added
 - Інтеграційні тести API у Postman: колекція `postman/kcher.postman_collection.json` (11 запитів з перевірками)

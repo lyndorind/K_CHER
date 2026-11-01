@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16
+    container_name: kcher-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kcher
+      POSTGRES_DB: kcher
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kcher -d kcher"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: lyndorind/kcher:${KCHER_TAG:-latest}
+    container_name: kcher-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: kcher
+      DB_USER: kcher
+      DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    ports:
+      - "8000:8000"
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+volumes:
+  pgdata:

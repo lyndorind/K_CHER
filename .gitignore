@@ -10,4 +10,5 @@ __pycache__/
 coverage.xml
 allure-results/
 allure-report/
+secrets/
 dist/

@@ -20,3 +20,17 @@
 
 Перед об'єднанням Pull Request зміни проходять review. У разі необхідності reviewer може запросити додаткові виправлення, після чого Pull Request перевіряється повторно.
 
+## Запуск через Docker Compose
+
+1. Створіть файл із паролем бази даних:
+   ```bash
+   mkdir -p secrets
+   openssl rand -base64 24 | tr -d '\n' > secrets/db_password.txt
+   ```
+2. Запустіть сервіс:
+   ```bash
+   docker compose up -d
+   ```
+3. Перевірте: `curl http://localhost:8000/ready`
+
+Дані PostgreSQL зберігаються в томі `pgdata`. Видалити їх разом із контейнерами: `docker compose down -v`.

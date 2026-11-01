@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.4] - 2026-11-01
+### Added
+- Конфігурація навантажувального тестування Apache JMeter: `jmeter/kcher-load-test.jmx` (параметри користувачів, розгону і тривалості через `-J`)
+- Job `load test (JMeter)` у воркфлоу `PR Docker Build`: запускається паралельно з іншими перевірками PR, зберігає результати й HTML-звіт JMeter як артефакт `load-test-results`
+- Скрипт `scripts/monitor-containers.sh` для моніторингу CPU та пам'яті контейнерів під час тесту
+- Скрипт `scripts/summarize-load-test.py`: підсумок у GitHub Step Summary та контроль частки помилок (не більше 1 %)
+
 ## [1.4.3] - 2026-11-01
 ### Added
 - `docker-compose.yml` для розгортання сервісу разом із PostgreSQL 16: том `pgdata` для персистентності даних і Docker secret `db_password` для пароля бази даних

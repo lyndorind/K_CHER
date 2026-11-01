@@ -134,3 +134,92 @@ jobs:
       - name: Application logs on failure
         if: failure()
         run: docker logs "$(docker ps -q --filter "ancestor=${{ needs.docker.outputs.image }}")"
+
+  # Навантажувальне тестування JMeter із паралельним моніторингом контейнерів.
+  # Виконується паралельно з інтеграційними тестами та unit-тестами.
+  load-test:
+    name: load test (JMeter)
+    needs: docker
+    runs-on: ubuntu-latest
+    env:
+      JMETER_VERSION: "5.6.3"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kcher
+          POSTGRES_PASSWORD: kcher_ci_password
+          POSTGRES_DB: kcher
+        options: >-
+          --health-cmd "pg_isready -U kcher -d kcher"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      app:
+        image: ${{ needs.docker.outputs.image }}
+        credentials:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        env:
+          DB_HOST: postgres
+          DB_NAME: kcher
+          DB_USER: kcher
+          DB_PASSWORD: kcher_ci_password
+        ports:
+          - 8000:8000
+        options: >-
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Wait for API and database
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/ready && exit 0
+            sleep 2
+          done
+          echo "API did not become ready"
+          exit 1
+
+      - name: Install JMeter
+        run: |
+          base="https://archive.apache.org/dist/jmeter/binaries"
+          curl -fsSLO "$base/apache-jmeter-${JMETER_VERSION}.tgz"
+          curl -fsSLO "$base/apache-jmeter-${JMETER_VERSION}.tgz.sha512"
+          sha512sum -c "apache-jmeter-${JMETER_VERSION}.tgz.sha512"
+          tar -xzf "apache-jmeter-${JMETER_VERSION}.tgz"
+
+      - name: Run JMeter with container monitoring
+        run: |
+          java -version
+          mkdir -p results
+          # Моніторинг ресурсів контейнерів працює паралельно з тестом
+          bash scripts/monitor-containers.sh results/docker-stats.csv 2 &
+          monitor_pid=$!
+          trap 'kill "$monitor_pid" 2>/dev/null || true' EXIT
+          "apache-jmeter-${JMETER_VERSION}/bin/jmeter" -n \
+            -t jmeter/kcher-load-test.jmx \
+            -l results/results.jtl \
+            -e -o results/report \
+            -Jhost=localhost -Jport=8000 \
+            -Jthreads=20 -Jrampup=5 -Jduration=30
+
+      - name: Summary and quality gate
+        if: always()
+        run: |
+          python3 scripts/summarize-load-test.py \
+            results/results.jtl results/docker-stats.csv >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload load test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: load-test-results
+          path: results/
+          if-no-files-found: warn
+
+      - name: Application logs on failure
+        if: failure()
+        run: docker logs "$(docker ps -q --filter "ancestor=${{ needs.docker.outputs.image }}")"

@@ -1,7 +1,10 @@
 # Changelog
 
-## [1.4.0] - 2026-11-01
+## [1.4.1] - 2026-11-01
+### Added
+- Воркфлоу `PR Docker Build`: збірка й публікація Docker-образу в pull request із тимчасовим тегом `pr-<номер>-<sha>` та smoke-тестом
 
+## [1.4.0] - 2026-11-01
 ### Added
 - API журналу обчислень із зберіганням у PostgreSQL: `POST /calculations`, `GET /calculations`, `GET /calculations/{id}`, `DELETE /calculations/{id}`
 - Ендпоінт `GET /ready` для перевірки підключення до бази даних

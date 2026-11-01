@@ -1,0 +1,62 @@
+name: PR Docker Build
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-docker-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    # Секрети Docker Hub недоступні для PR із форків
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+    env:
+      IMAGE: ${{ vars.DOCKERHUB_NAMESPACE }}/kcher
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker metadata (temporary tag)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,format=short,prefix=pr-${{ github.event.pull_request.number }}-
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: |
+          docker run -d --name kcher-smoke -p 8000:8000 "${{ steps.meta.outputs.tags }}"
+          for i in $(seq 1 15); do
+            curl -fsS http://localhost:8000/health && exit 0
+            sleep 2
+          done
+          docker logs kcher-smoke
+          exit 1
+
+      - name: Summary
+        run: echo "Temporary image ${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
